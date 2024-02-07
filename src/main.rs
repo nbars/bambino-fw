@@ -1,29 +1,22 @@
 #![no_std]
 #![no_main]
 
-use core::{num::NonZeroU16, time};
+use core::num::NonZeroU16;
 
 use crate::temperature::Temperature;
 use buttons::Buttons;
 use defmt::info;
 use embassy_executor::Spawner;
 use embassy_futures::select;
-use embassy_stm32::adc::Adc;
-use embassy_stm32::{
-    adc, bind_interrupts,
-    exti::{Channel, ExtiInput},
-    gpio::{self, Input, Output, Pin, Pull},
-    interrupt::typelevel::ADC1,
-    peripherals::ADC,
-    Peripheral,
-};
-use embassy_time::{Delay, Duration, Timer};
+use embassy_stm32::exti::Channel;
+use embassy_stm32::gpio::Pin;
+use embassy_stm32::timer::low_level::Basic16bitInstance;
+use embassy_time::{Duration, Timer};
+use flow_meter::FlowMeter;
 use heater::Heater;
 use leds::LEDs;
 use pump::Pump;
 use solenoid::Solenoid;
-
-use {defmt_rtt as _, panic_probe as _};
 
 mod buttons;
 mod flow_meter;
@@ -36,6 +29,8 @@ mod temperature;
 #[embassy_executor::main]
 async fn main(_spawner: Spawner) -> ! {
     let p = embassy_stm32::init(Default::default());
+
+    let mut flow_meter = FlowMeter::new(p.PB11.degrade(), p.PA7.degrade());
 
     let mut solenoid = Solenoid::new(p.PA11.degrade());
 
@@ -58,15 +53,10 @@ async fn main(_spawner: Spawner) -> ! {
 
     let mut heater = Heater::new(p.PB6.degrade());
 
-    // let flow_signal = p.PA7.degrade();
-    // let flow_enable = p.PB11.degrade();
-
-    // let radiator = p.PB6.degrade();
-
     solenoid.switch_to_steam_wand();
 
     loop {
-        let button = buttons.wait_for_button_press(Some(Duration::from_millis(50)));
+        let button = buttons.wait_for_button_press(Some(Duration::from_millis(100)));
         let timer = Timer::after_millis(200);
 
         let event = select::select(button, timer).await;
@@ -92,6 +82,8 @@ async fn main(_spawner: Spawner) -> ! {
                     .read_averaged_celcius(NonZeroU16::new(1000).unwrap())
                     .await;
                 info!("t: {}°C", t);
+                let ctr = embassy_stm32::peripherals::TIM3::regs().cnt().read().0;
+                info!("ctr: {}", ctr);
             }
         }
     }

@@ -1,5 +1,5 @@
 //!
-//! Module the get the status of all physical button of the machine.
+//! Module the get the status of all physical buttons of the machine.
 //!
 
 use embassy_futures::select::{self, select4};
@@ -12,23 +12,33 @@ use embassy_stm32::{
 use embassy_time::{Duration, Instant, Timer};
 
 #[derive(Clone, Copy)]
+/// The button that caused the event.
 pub enum ButtonKind {
+    /// The one cup button.
     OneCup,
+    /// The two cups button.
     TwoCup,
+    /// The hot water button.
     HotWater,
+    /// The steam button.
     Steam,
 }
 
+/// Event that is fired if a button was pressed.
 pub struct ButtonPressEvent {
+    /// The time the button press was registered.
     ts: Instant,
+    /// The button that was pressed.
     button: ButtonKind,
 }
 
 impl ButtonPressEvent {
-    pub fn start_ts(&self) -> Instant {
+    /// The time the button was pressed.
+    pub fn timestamp(&self) -> Instant {
         self.ts
     }
 
+    /// The orginating button of the event.
     pub fn source(&self) -> ButtonKind {
         self.button
     }
@@ -41,7 +51,6 @@ pub struct Buttons<'a> {
     hot_water_exti: ExtiInput<'a, AnyPin>,
     last_poll: Option<Instant>,
 }
-
 
 impl<'a> Buttons<'a> {
     pub fn new<OneCupPin, TwoCupPin, SteamPin, HotWaterPin>(
@@ -81,37 +90,24 @@ impl<'a> Buttons<'a> {
         }
     }
 
-    // pub fn new(
-    //     one_cup: ExtiInput<'a, AnyPin>,
-    //     two_cup: ExtiInput<'a, AnyPin>,
-    //     hot_water: ExtiInput<'a, AnyPin>,
-    //     steam: ExtiInput<'a, AnyPin>,
-    // ) -> Self {
-    //     Buttons {
-    //         one_cup,
-    //         two_cup,
-    //         hot_water,
-    //         steam,
-    //     }
-    // }
-
     pub async fn wait_for_button_press(&mut self, debounce: Option<Duration>) -> ButtonPressEvent {
         if let (Some(last_poll), Some(debounce)) = (self.last_poll, debounce) {
-            let diff = last_poll.elapsed() - debounce;
-            self.last_poll = Some(Instant::now());
-            if diff.as_millis() > 0 {
-                Timer::after(diff).await;
+            let diff = last_poll.elapsed();
+            if diff < debounce {
+                Timer::after(debounce - diff).await;
             }
         }
 
         let selection = select4(
-            self.one_cup_exti.wait_for_high(),
-            self.two_cup_exti.wait_for_high(),
-            self.hot_water_exti.wait_for_high(),
-            self.steam_exti.wait_for_high(),
+            self.one_cup_exti.wait_for_rising_edge(),
+            self.two_cup_exti.wait_for_rising_edge(),
+            self.hot_water_exti.wait_for_rising_edge(),
+            self.steam_exti.wait_for_rising_edge(),
         )
         .await;
+
         let ts = Instant::now();
+        self.last_poll = Some(ts);
         let button = match selection {
             select::Either4::First(_) => ButtonKind::OneCup,
             select::Either4::Second(_) => ButtonKind::TwoCup,
@@ -120,5 +116,4 @@ impl<'a> Buttons<'a> {
         };
         ButtonPressEvent { ts, button }
     }
-
 }

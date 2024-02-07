@@ -1,8 +1,4 @@
-use embassy_stm32::{
-    gpio::{AnyPin, Level, Output, Speed},
-    timer::{simple_pwm::SimplePwm, Channel1Pin, Channel2Pin, Channel3Pin, Channel4Pin},
-    Peripheral,
-};
+use embassy_stm32::gpio::{AnyPin, Level, Output, Speed};
 
 pub struct Heater<'a> {
     pin: Output<'a, AnyPin>,

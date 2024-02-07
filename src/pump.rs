@@ -1,14 +1,12 @@
-use defmt::info;
 use embassy_stm32::{
-    gpio::{AnyPin, OutputType},
+    gpio::OutputType,
     time::Hertz,
     timer::{
-        simple_pwm::{Ch1, PwmPin, SimplePwm},
+        simple_pwm::{PwmPin, SimplePwm},
         Channel, Channel1Pin, CountingMode,
     },
     Peripheral,
 };
-use embassy_time::Timer;
 
 const SPEED_LOWER_BOUND: u16 = 6250;
 

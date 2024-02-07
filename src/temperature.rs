@@ -3,8 +3,6 @@ use core::num::NonZeroU16;
 use embassy_stm32::{
     adc::{self, Adc, AdcPin},
     bind_interrupts,
-    gpio::AnyPin,
-    interrupt::typelevel::ADC1,
     peripherals::ADC,
 };
 use embassy_time::Delay;

@@ -1,9 +1,4 @@
-use core::any::Any;
-
-use embassy_stm32::{
-    exti::ExtiInput,
-    gpio::{low_level::Pin, AnyPin, Input, Level, Output, Pull, Speed},
-};
+use embassy_stm32::gpio::{AnyPin, Level, Output, Speed};
 
 pub struct LEDs<'a> {
     one_cup: Output<'a, AnyPin>,
