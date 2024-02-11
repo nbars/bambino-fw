@@ -17,3 +17,4 @@
 pub mod buttons;
 pub mod leds;
 pub mod pump;
+pub mod heater;
