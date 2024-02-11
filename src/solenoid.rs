@@ -1,11 +1,15 @@
-use embassy_stm32::gpio::{AnyPin, Level, Output, Speed};
+use embassy_stm32::{
+    gpio::{AnyPin, Level, Output, Pin, Speed},
+    peripherals, Peripherals,
+};
 
 pub struct Solenoid<'a> {
     pin: Output<'a, AnyPin>,
 }
 
 impl<'a> Solenoid<'a> {
-    pub fn new(pin: AnyPin) -> Self {
+    pub fn new(p: &Peripherals) -> Self {
+        let pin = p.PA11.degrade();
         Solenoid {
             pin: Output::new(pin, Level::Low, Speed::Low),
         }

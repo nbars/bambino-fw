@@ -1,12 +1,15 @@
-use embassy_stm32::gpio::{AnyPin, Level, Output, Speed};
+use embassy_stm32::{
+    gpio::{AnyPin, Level, Output, Pin, Speed},
+    Peripherals,
+};
 
 pub struct Heater<'a> {
     pin: Output<'a, AnyPin>,
 }
 
 impl<'a> Heater<'a> {
-    pub fn new(pin: AnyPin) -> Self {
-        let pin = Output::new(pin, Level::Low, Speed::Low);
+    pub fn new(p: &Peripherals) -> Self {
+        let pin = Output::new(p.PB6.degrade(), Level::Low, Speed::Low);
         Heater { pin }
     }
 

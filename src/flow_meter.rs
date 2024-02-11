@@ -4,9 +4,10 @@
 //!
 
 use embassy_stm32::{
-    gpio::{self, AnyPin},
+    gpio::{self, AnyPin, Pin},
     rcc::low_level::RccPeripheral,
     timer::low_level::{Basic16bitInstance, GeneralPurpose16bitInstance},
+    Peripheral, Peripherals,
 };
 
 pub struct FlowMeter<'a> {
@@ -20,7 +21,10 @@ pub struct MilliliterPerSecond(pub u8);
 // 171.5g / 353 events
 
 impl<'a> FlowMeter<'a> {
-    pub fn new(flow_enable_pin: AnyPin, signal_pin: AnyPin) -> Self {
+    pub fn new(p: &Peripherals) -> Self {
+        let flow_enable_pin = p.PB11.degrade();
+        let signal_pin: AnyPin = p.PA7.degrade();
+
         let flow_enable_pin =
             gpio::Output::new(flow_enable_pin, gpio::Level::Low, gpio::Speed::Low);
 

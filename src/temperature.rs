@@ -3,28 +3,29 @@ use core::num::NonZeroU16;
 use embassy_stm32::{
     adc::{self, Adc, AdcPin},
     bind_interrupts,
-    peripherals::ADC,
+    peripherals::{ADC, PB1},
+    Peripherals,
 };
 use embassy_time::Delay;
 
-pub struct Temperature<'a, P: AdcPin<ADC>> {
+pub struct Temperature<'a> {
     adc: Adc<'a, ADC>,
-    ntc_pin: P,
+    ntc_pin: PB1,
 }
 
-impl<'a, P> Temperature<'a, P>
-where
-    P: AdcPin<ADC>,
-{
-    pub fn new(adc: ADC, mut ntc_pin: P) -> Self {
+impl<'a> Temperature<'a> {
+    pub fn new(p: &Peripherals) -> Self {
         bind_interrupts!(struct Irqs {
             ADC1 => adc::InterruptHandler<ADC>;
         });
-        let mut adc = Adc::new(adc, Irqs, &mut Delay);
+        let mut adc = Adc::new(p.ADC, Irqs, &mut Delay);
         adc.set_sample_time(adc::SampleTime::Cycles239_5);
         let _vref = adc.enable_vref(&mut Delay);
 
-        Temperature { adc, ntc_pin }
+        Temperature {
+            adc,
+            ntc_pin: p.PB1,
+        }
     }
 
     pub async fn read_raw_averaged(&mut self, iterations: NonZeroU16) -> f32 {
