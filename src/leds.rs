@@ -3,7 +3,8 @@
 //!
 
 use embassy_stm32::{
-    gpio::{AnyPin, Level, Output, Speed}, Peripherals
+    gpio::{AnyPin, Level, Output, Speed},
+    Peripherals,
 };
 use embassy_sync::{blocking_mutex::raw::ThreadModeRawMutex, signal::Signal};
 
@@ -22,7 +23,7 @@ pub enum LEDState {
     /// LED is off.
     Off,
     /// LED is blinking with the given frequency.
-    Blinking(Hz)
+    Blinking(Hz),
 }
 
 /// All the controllable LEDs.
@@ -35,15 +36,12 @@ pub enum LEDKind {
 }
 
 /// All controllable LEDs of the machine.
-pub struct LEDs {
-
-}
+pub struct LEDs;
 
 impl LEDs {
-
     /// Turn all LEDs off.
     pub fn off(&mut self) {
-        self.set_state_all(LEDState::Off)
+        self.set_state_all(LEDState::Off);
     }
 
     /// Set all LEDs to `new_state`.
@@ -59,9 +57,7 @@ impl LEDs {
             LEDKind::TwoCup => TWO_CUP_LED_STATE.signal(new_state),
         }
     }
-
 }
-
 
 struct LEDTask<'a> {
     one_cup: Output<'a, AnyPin>,
@@ -108,10 +104,7 @@ impl<'a> LEDTask<'a> {
 #[embassy_executor::task]
 async fn led_task() -> ! {
     let p = unsafe { Peripherals::steal() };
-    let mut leds = unsafe { LEDTask::new(p) };
+    let mut leds = LEDTask::new(p);
 
-    loop {
-
-    }
-
+    loop {}
 }

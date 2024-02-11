@@ -3,10 +3,10 @@
 
 // use core::num::NonZeroU16;
 
-use {defmt_rtt as _, panic_probe as _};
 use bambino_fw::{buttons, pump};
 use embassy_executor::Spawner;
 use embassy_time::Timer;
+use {defmt_rtt as _, panic_probe as _};
 
 use defmt::*;
 

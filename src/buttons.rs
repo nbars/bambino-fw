@@ -42,7 +42,11 @@ pub struct ButtonEvent {
 impl ButtonEvent {
     /// Create a new button event.
     pub fn new(source: ButtonKind, state: ButtonState, timestamp: Instant) -> Self {
-        ButtonEvent { source, state, timestamp }
+        ButtonEvent {
+            source,
+            state,
+            timestamp,
+        }
     }
 
     /// Construct a new `ButtonEvent` with inverted button state and timestamp
@@ -70,7 +74,6 @@ impl ButtonEvent {
     pub fn timestamp(&self) -> Instant {
         self.timestamp
     }
-
 }
 
 /// State of a button. Ether `Pressed` or `Released`.
@@ -118,10 +121,13 @@ static BUTTON_EVENT_CHANNEL: ButtonEventChannel = ButtonEventChannel::new();
 const DEBOUNCE_INTERVAL: Duration = Duration::from_millis(50);
 
 /// All buttons of the machine.
-pub struct Buttons {}
+pub struct Buttons;
 
 impl Buttons {
     /// Create a new `Buttons` instance.
+    ///
+    /// # Panics
+    /// If the spawner fails to spawn the task.
     pub fn new(spawner: &mut Spawner) -> Self {
         spawner.spawn(button_task()).unwrap();
         Buttons {}
@@ -149,7 +155,7 @@ struct ButtonsTask<'a> {
 }
 
 impl<'a> ButtonsTask<'a> {
-    unsafe fn new(p: &Peripherals) -> Self {
+    fn new(p: Peripherals) -> Self {
         let one_cup_input = gpio::Input::new(
             unsafe { p.PA0.clone_unchecked().degrade() },
             gpio::Pull::None,
@@ -184,11 +190,11 @@ impl<'a> ButtonsTask<'a> {
         let last_one_cup_event =
             ButtonEvent::new(ButtonKind::OneCup, ButtonState::Released, Instant::now());
         let last_two_cup_event =
-        ButtonEvent::new(ButtonKind::TwoCup, ButtonState::Released, Instant::now());
+            ButtonEvent::new(ButtonKind::TwoCup, ButtonState::Released, Instant::now());
         let last_hot_water_event =
-        ButtonEvent::new(ButtonKind::HotWater, ButtonState::Released, Instant::now());
+            ButtonEvent::new(ButtonKind::HotWater, ButtonState::Released, Instant::now());
         let last_steam_event =
-        ButtonEvent::new(ButtonKind::Steam, ButtonState::Released, Instant::now());
+            ButtonEvent::new(ButtonKind::Steam, ButtonState::Released, Instant::now());
 
         ButtonsTask {
             one_cup_exti,
@@ -238,7 +244,6 @@ impl<'a> ButtonsTask<'a> {
             ButtonState::Released => self.steam_exti.wait_for_high().right_future(),
         };
 
-
         match select::select4(one_cup_watch, two_cup_watch, hot_water_watch, steam_watch).await {
             select::Either4::First(_) => self.last_one_cup_event.state_transition(),
             select::Either4::Second(_) => self.last_two_cup_event.state_transition(),
@@ -249,10 +254,9 @@ impl<'a> ButtonsTask<'a> {
 
     async fn wait_for_button_event_debounced(&mut self) -> (ButtonEvent, ButtonEvent) {
         loop {
-            let event @ ButtonEvent {source, ..} = self.wait_for_button_event().await;
+            let event @ ButtonEvent { source, .. } = self.wait_for_button_event().await;
             {
-                let elapsed_since_last_event =
-                    self.kind_to_last_event(source).elapsed();
+                let elapsed_since_last_event = self.kind_to_last_event(source).elapsed();
                 if elapsed_since_last_event < DEBOUNCE_INTERVAL {
                     continue;
                 }
@@ -268,8 +272,7 @@ impl<'a> ButtonsTask<'a> {
 #[embassy_executor::task]
 async fn button_task() -> ! {
     let p = unsafe { Peripherals::steal() };
-
-    let mut buttons = unsafe { ButtonsTask::new(&p) };
+    let mut buttons = ButtonsTask::new(p);
 
     loop {
         let (old_state, new_state) = buttons.wait_for_button_event_debounced().await;

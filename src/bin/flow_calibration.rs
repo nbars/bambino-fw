@@ -1,9 +1,9 @@
 #![no_std]
 #![no_main]
 
-use {defmt_rtt as _, panic_probe as _};
 use bambino_fw::{buttons, pump};
 use embassy_executor::Spawner;
+use {defmt_rtt as _, panic_probe as _};
 
 #[allow(unused)]
 use defmt::*;

@@ -56,7 +56,8 @@ impl<'a> Pump<'a, TIM16> {
         ret
     }
 
-    /// The the power of the pump to `power`.
+    /// Set the power of the pump to `power`.
+    #[allow(clippy::missing_panics_doc)] // this assert is just for debug builds.
     pub fn set_power(&mut self, power: PumpPower) {
         let max_duty = self.pwm.get_max_duty();
         debug_assert!(max_duty > SPEED_LOWER_BOUND);
@@ -76,9 +77,9 @@ impl<'a> Pump<'a, TIM16> {
     /// Turn the pump on if it is off, and vice versa.
     pub fn toggle(&mut self) {
         if self.pwm.is_enabled(Channel::Ch1) {
-            self.disable()
+            self.disable();
         } else {
-            self.enable()
+            self.enable();
         }
     }
 
