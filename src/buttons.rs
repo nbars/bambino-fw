@@ -14,6 +14,11 @@ use futures::FutureExt;
 use embassy_sync::blocking_mutex::raw::ThreadModeRawMutex;
 use embassy_time::{Duration, Instant};
 
+type ButtonEventChannel =
+    embassy_sync::channel::Channel<ThreadModeRawMutex, ButtonStateTransitionEvent, 6>;
+static BUTTON_EVENT_CHANNEL: ButtonEventChannel = ButtonEventChannel::new();
+const DEBOUNCE_INTERVAL: Duration = Duration::from_millis(50);
+
 #[derive(defmt::Format, Clone, Copy)]
 /// The kind of button that may be pressed or released.
 pub enum ButtonKind {
@@ -114,11 +119,6 @@ impl ButtonStateTransitionEvent {
         &self.new_state
     }
 }
-
-type ButtonEventChannel =
-    embassy_sync::channel::Channel<ThreadModeRawMutex, ButtonStateTransitionEvent, 6>;
-static BUTTON_EVENT_CHANNEL: ButtonEventChannel = ButtonEventChannel::new();
-const DEBOUNCE_INTERVAL: Duration = Duration::from_millis(50);
 
 /// All buttons of the machine.
 pub struct Buttons;

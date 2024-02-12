@@ -1,18 +1,19 @@
 #![no_std]
 #![no_main]
 
-use bambino_fw::{buttons, pump};
+use bambino_fw::{buttons, leds};
+use defmt::*;
 use embassy_executor::Spawner;
 use {defmt_rtt as _, panic_probe as _};
 
-#[allow(unused)]
-use defmt::*;
-
 #[embassy_executor::main]
 async fn main(mut spawner: Spawner) -> ! {
-    let p = embassy_stm32::init(Default::default());
-    let mut pump = pump::Pump::new(&p);
+    let _p = embassy_stm32::init(Default::default());
+    //let mut pump = pump::Pump::new(&p);
+
     let mut buttons = buttons::Buttons::new(&mut spawner);
+    let mut leds = leds::LEDs::new(&mut spawner);
+    leds.set_state_all(leds::LEDState::On);
 
     /*
     Calibrate the following things:
@@ -33,6 +34,16 @@ async fn main(mut spawner: Spawner) -> ! {
         let event = buttons.wait_for_button_state_change().await;
         let new_state = event.new_state().state();
         let source = event.new_state().source();
-        info!("Button {:?} is now in state {:?}", source, new_state);
+        info!("Button {:?} is now in state {:?}", &source, new_state);
+
+        match source {
+            buttons::ButtonKind::OneCup => {
+                leds.set_state(leds::LEDKind::OneCup, leds::LEDState::Blinking(2))
+            }
+            buttons::ButtonKind::TwoCup => {
+                leds.set_state(leds::LEDKind::TwoCup, leds::LEDState::Blinking(3))
+            }
+            _ => (),
+        }
     }
 }

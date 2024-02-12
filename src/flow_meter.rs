@@ -2,26 +2,62 @@
 //! Module to read the ODE AB32 flow meter that is used to measure the
 //! amount of water flowwing through the pump.
 //!
+#![allow(clippy::new_without_default)]
 
+use cortex_m::interrupt;
+use embassy_executor::Spawner;
+use embassy_stm32::interrupt::Interrupt;
+use embassy_stm32::pac::timer::regs::Cnt16;
 use embassy_stm32::{
     gpio::{self, AnyPin, Pin},
+    peripherals,
     rcc::low_level::RccPeripheral,
-    timer::low_level::{Basic16bitInstance, GeneralPurpose16bitInstance},
+    timer::low_level::{
+        Basic16bitInstance, CaptureCompare16bitInstance, GeneralPurpose16bitInstance,
+    },
     Peripheral, Peripherals,
 };
+use embassy_sync::blocking_mutex::raw::ThreadModeRawMutex;
+use embassy_sync::signal::Signal;
+use embassy_time::{Duration, Instant, Ticker};
 
-pub struct FlowMeter<'a> {
+// #[interrupt]
+// unsafe fn TIM3() {
+//     EXECUTOR_MED.on_interrupt()
+// }
+
+/// The SI unit milliliter per seconds.
+pub struct MilliliterPerSecond(pub u32);
+
+static CURRENT_FLOW: Signal<ThreadModeRawMutex, MilliliterPerSecond> = Signal::new();
+
+/// The flow meter of the machine used to measure the water flow.
+pub struct FlowMeter;
+
+impl FlowMeter {
+    /// Create a new `FlowMeter` instance.
+    ///
+    /// # Safety
+    /// This is only safe to be called once.
+    ///
+    /// # Panics
+    /// If there is not enough memory to spawn a new task.
+    pub unsafe fn new(spawner: &mut Spawner) -> Self {
+        spawner.spawn(flowmeter_task()).unwrap();
+        FlowMeter {}
+    }
+}
+
+
+struct FlowMeterTask<'a> {
     flow_enable_pin: gpio::Output<'a, AnyPin>,
 }
 
-pub struct MilliliterPerSecond(pub u8);
+impl<'a> FlowMeterTask<'a> {
+    /// Create a new `FlowMeter`` instance.
+    pub fn new() -> Self {
+        let p = unsafe { Peripherals::steal() };
 
-// TODO: Measure flow and clibrate.
-// flow measurements
-// 171.5g / 353 events
-
-impl<'a> FlowMeter<'a> {
-    pub fn new(p: &Peripherals) -> Self {
         let flow_enable_pin = p.PB11.degrade();
         let signal_pin: AnyPin = p.PA7.degrade();
 
@@ -42,7 +78,7 @@ impl<'a> FlowMeter<'a> {
             .ccer()
             .modify(|v| {
                 v.set_ccp(1, false);
-                v.set_ccnp(1, false)
+                v.set_ccnp(1, false);
             });
         embassy_stm32::peripherals::TIM3::regs_gp16()
             .smcr()
@@ -59,14 +95,27 @@ impl<'a> FlowMeter<'a> {
 
         // todo: overflow interrupt
 
-        FlowMeter { flow_enable_pin }
+        FlowMeterTask { flow_enable_pin }
     }
 
-    pub fn current_flow(&mut self) -> MilliliterPerSecond {
-        todo!();
+    fn read_counter_and_reset(&mut self) -> u16 {
+        embassy_stm32::peripherals::TIM3::regs()
+            // FIXME: This is likely not atomic :/
+            .cnt()
+            .modify(|f| {
+                let old = f.0;
+                *f = Cnt16(0);
+                old
+            })
+            .try_into()
+            .unwrap()
     }
 
-    pub fn enable(&mut self) {
+    fn counter_to_mg(counter: u32) -> f32 {
+        counter as f32 * 0.4858
+    }
+
+    fn enable(&mut self) {
         embassy_stm32::peripherals::TIM3::regs()
             .cnt()
             .write_value(embassy_stm32::pac::timer::regs::Cnt16(0));
@@ -76,10 +125,32 @@ impl<'a> FlowMeter<'a> {
         self.flow_enable_pin.set_high();
     }
 
-    pub fn disable(&mut self) {
+    fn disable(&mut self) {
         self.flow_enable_pin.set_low();
         embassy_stm32::peripherals::TIM3::regs_gp16()
             .cr1()
             .modify(|r| r.set_cen(false));
+    }
+
+    fn update_flow(&mut self, elapsed_time: Duration) {
+        todo!();
+        let ctr = self.read_counter_and_reset();
+        //let flow = FlowMeterTask::counter_to_mg(ctr);
+    }
+}
+
+#[embassy_executor::task]
+async fn flowmeter_task() -> ! {
+    let mut flow_meter = FlowMeterTask::new();
+    let mut ticker = Ticker::every(Duration::from_millis(100));
+
+    CURRENT_FLOW.signal(MilliliterPerSecond(0));
+
+    loop {
+        let last_update = Instant::now();
+        ticker.next();
+
+        let elapsed = last_update.elapsed();
+        flow_meter.update_flow(elapsed);
     }
 }

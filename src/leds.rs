@@ -2,6 +2,8 @@
 //! Everything related to control the portafilter machine LED's.
 //!
 
+use embassy_executor::Spawner;
+use embassy_futures::select::{self};
 use embassy_stm32::{
     gpio::{AnyPin, Level, Output, Speed},
     Peripherals,
@@ -9,6 +11,7 @@ use embassy_stm32::{
 use embassy_sync::{blocking_mutex::raw::ThreadModeRawMutex, signal::Signal};
 
 use embassy_stm32::gpio::Pin as _;
+use embassy_time::{Duration, Ticker};
 
 static ONE_CUP_LED_STATE: Signal<ThreadModeRawMutex, LEDState> = Signal::new();
 static TWO_CUP_LED_STATE: Signal<ThreadModeRawMutex, LEDState> = Signal::new();
@@ -37,8 +40,21 @@ pub enum LEDKind {
 
 /// All controllable LEDs of the machine.
 pub struct LEDs;
-
 impl LEDs {
+    ///
+    /// # Panics
+    /// If there are insufficient ressource for spawning news tasks.
+    pub fn new(spawner: &mut Spawner) -> Self {
+        let p = unsafe { Peripherals::steal() };
+        spawner
+            .spawn(led_task(LEDKind::OneCup, p.PA15.degrade()))
+            .unwrap();
+        spawner
+            .spawn(led_task(LEDKind::TwoCup, p.PB3.degrade()))
+            .unwrap();
+        LEDs {}
+    }
+
     /// Turn all LEDs off.
     pub fn off(&mut self) {
         self.set_state_all(LEDState::Off);
@@ -60,51 +76,65 @@ impl LEDs {
 }
 
 struct LEDTask<'a> {
-    one_cup: Output<'a, AnyPin>,
-    two_cup: Output<'a, AnyPin>,
+    led: Output<'a, AnyPin>,
 }
 
 impl<'a> LEDTask<'a> {
-    fn new(p: Peripherals) -> Self {
-        let one_cup = Output::new(p.PA15.degrade(), Level::Low, Speed::Low);
-        let two_cup = Output::new(p.PB3.degrade(), Level::Low, Speed::Low);
-        LEDTask { one_cup, two_cup }
+    fn new(led: AnyPin) -> Self {
+        let led = Output::new(led, Level::Low, Speed::Low);
+        LEDTask { led }
+    }
+
+    fn on(&mut self) {
+        self.led.set_high();
     }
 
     fn off(&mut self) {
-        self.set_one_cup(false);
-        self.set_two_cup(false);
+        self.led.set_low();
     }
 
-    fn set_one_cup(&mut self, on: bool) {
-        if on {
-            self.one_cup.set_high();
-        } else {
-            self.one_cup.set_low();
-        }
+    fn toggle(&mut self) {
+        self.led.toggle();
     }
 
-    fn set_two_cup(&mut self, on: bool) {
-        if on {
-            self.two_cup.set_high();
-        } else {
-            self.two_cup.set_low();
-        }
-    }
-
-    fn toggle_one_cup(&mut self) {
-        self.one_cup.toggle();
-    }
-
-    fn toggle_two_cup(&mut self) {
-        self.two_cup.toggle();
+    fn is_on(&self) -> bool {
+        self.led.is_set_high()
     }
 }
 
-#[embassy_executor::task]
-async fn led_task() -> ! {
-    let p = unsafe { Peripherals::steal() };
-    let mut leds = LEDTask::new(p);
+#[embassy_executor::task(pool_size = 2)]
+async fn led_task(kind: LEDKind, led: AnyPin) -> ! {
+    let mut led = LEDTask::new(led);
+    led.off();
 
-    loop {}
+    let requested_led_state = match kind {
+        LEDKind::OneCup => &ONE_CUP_LED_STATE,
+        LEDKind::TwoCup => &TWO_CUP_LED_STATE,
+    };
+
+    let mut blinking = false;
+    let mut ticker = Ticker::every(Duration::from_secs(3600));
+    loop {
+        match select::select(requested_led_state.wait(), ticker.next()).await {
+            select::Either::First(new_state) => match new_state {
+                LEDState::On => {
+                    ticker = Ticker::every(Duration::from_secs(3600));
+                    led.on();
+                }
+                LEDState::Off => {
+                    ticker = Ticker::every(Duration::from_secs(3600));
+                    led.off();
+                }
+                LEDState::Blinking(frequency) => {
+                    blinking = true;
+                    ticker = Ticker::every(Duration::from_hz(frequency as u64));
+                }
+            },
+            select::Either::Second(_) => {
+                if blinking {
+                    led.toggle();
+                }
+            }
+        }
+    }
 }
