@@ -1,7 +1,7 @@
 #![no_std]
 #![no_main]
 
-use bambino_fw::{buttons, leds};
+use bambino_fw::hardware::{buttons, leds};
 use defmt::*;
 use embassy_executor::Spawner;
 use {defmt_rtt as _, panic_probe as _};
