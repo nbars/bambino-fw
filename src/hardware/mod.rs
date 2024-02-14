@@ -1,3 +1,8 @@
+//!
+//! This module contains all functionality related to the different hardware components
+//! of the portafilter machine.
+//!
+
 #![allow(clippy::new_without_default)]
 
 pub mod buttons;

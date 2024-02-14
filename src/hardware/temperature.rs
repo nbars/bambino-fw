@@ -1,7 +1,12 @@
+//!
+//! This module contains the logic related to the temperature sensor that allows
+//! to measure the water temperature just before it is exiting the heater.
+//!
+
 use core::num::NonZeroU16;
 
 use embassy_stm32::{
-    adc::{self, Adc, AdcPin},
+    adc::{self, Adc},
     bind_interrupts,
     peripherals::{ADC, PB1},
     Peripherals,
@@ -18,7 +23,7 @@ impl<'a> Temperature<'a> {
     /// # Safety
     /// This is only safe when called once and without concurrently calling any of the `new()``
     /// methods of the other hardware components.
-    pub unsafe fn new(p: &Peripherals) -> Self {
+    pub unsafe fn new() -> Self {
         let p = unsafe { Peripherals::steal() };
 
         bind_interrupts!(struct Irqs {

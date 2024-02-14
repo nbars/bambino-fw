@@ -1,6 +1,6 @@
 //!
 //! Module to read the ODE AB32 flow meter that is used to measure the
-//! amount of water flowwing through the pump.
+//! amount of water flowing through the pump.
 //!
 #![allow(clippy::new_without_default)]
 
