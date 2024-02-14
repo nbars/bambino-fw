@@ -14,7 +14,13 @@ pub struct Temperature<'a> {
 }
 
 impl<'a> Temperature<'a> {
-    pub fn new(p: &Peripherals) -> Self {
+    /// Create a new `Temperature` instrance in order to measure the water temperature.
+    /// # Safety
+    /// This is only safe when called once and without concurrently calling any of the `new()``
+    /// methods of the other hardware components.
+    pub unsafe fn new(p: &Peripherals) -> Self {
+        let p = unsafe { Peripherals::steal() };
+
         bind_interrupts!(struct Irqs {
             ADC1 => adc::InterruptHandler<ADC>;
         });

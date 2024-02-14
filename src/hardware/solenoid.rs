@@ -8,7 +8,12 @@ pub struct Solenoid<'a> {
 }
 
 impl<'a> Solenoid<'a> {
-    pub fn new(p: &Peripherals) -> Self {
+    /// Create a new `Solenoid` instance to control whether water is poured via shower or steam wand.
+    /// # Safety
+    /// This is only safe when called once and without concurrently calling any of the `new()``
+    /// methods of the other hardware components.
+    pub unsafe fn new() -> Self {
+        let p = unsafe { Peripherals::steal() };
         let pin = p.PA11.degrade();
         Solenoid {
             pin: Output::new(pin, Level::Low, Speed::Low),

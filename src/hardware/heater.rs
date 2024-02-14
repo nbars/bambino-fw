@@ -14,7 +14,10 @@ pub struct Heater<'a> {
 
 impl<'a> Heater<'a> {
     /// Create a new heater instance.
-    pub fn new(p: Peripherals) -> Self {
+    /// # Safety
+    /// This is only safe when called once and without concurrently calling any of the `new()``
+    /// methods of the other hardware components.
+    pub unsafe fn new(p: Peripherals) -> Self {
         let pin = Output::new(p.PB6.degrade(), Level::Low, Speed::Low);
         Heater { pin }
     }

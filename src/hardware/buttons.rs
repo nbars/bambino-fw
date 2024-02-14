@@ -82,7 +82,7 @@ impl ButtonEvent {
 }
 
 /// State of a button. Ether `Pressed` or `Released`.
-#[derive(Clone, Copy, defmt::Format)]
+#[derive(Clone, Copy, defmt::Format, PartialEq)]
 pub enum ButtonState {
     /// The button is pressed.
     Pressed,
@@ -128,7 +128,10 @@ impl Buttons {
     ///
     /// # Panics
     /// If the spawner fails to spawn the task.
-    pub fn new(spawner: &mut Spawner) -> Self {
+    /// # Safety
+    /// This is only safe when called once and without concurrently calling any of the `new()``
+    /// methods of the other hardware components.
+    pub unsafe fn new(spawner: &mut Spawner) -> Self {
         spawner.spawn(button_task()).unwrap();
         Buttons {}
     }

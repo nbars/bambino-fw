@@ -32,8 +32,12 @@ pub struct Pump<'a, T> {
 }
 
 impl<'a> Pump<'a, TIM16> {
-    /// Create a new `Pump` instance.
-    pub fn new(p: &Peripherals) -> Self {
+    /// Create a new `Pump` instance in order to controll the pump.
+    /// # Safety
+    /// This is only safe when called once and without concurrently calling any of the `new()``
+    /// methods of the other hardware components.
+    pub unsafe fn new() -> Self {
+        let p = unsafe { Peripherals::steal() };
         let pin = PwmPin::new_ch1(unsafe { p.PB8.clone_unchecked() }, OutputType::PushPull);
         let pwm = SimplePwm::new(
             unsafe { p.TIM16.clone_unchecked() },

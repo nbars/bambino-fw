@@ -13,8 +13,8 @@ use defmt::*;
 #[embassy_executor::main]
 async fn main(mut spawner: Spawner) -> ! {
     let p = embassy_stm32::init(Default::default());
-    let mut pump = pump::Pump::new(&p);
-    let mut buttons = buttons::Buttons::new(&mut spawner);
+    let mut pump = unsafe { pump::Pump::new() };
+    let mut buttons = unsafe { buttons::Buttons::new(&mut spawner) };
 
     pump.set_power(pump::PumpPower::Lowest);
     pump.enable();

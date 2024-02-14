@@ -41,10 +41,13 @@ pub enum LEDKind {
 /// All controllable LEDs of the machine.
 pub struct LEDs;
 impl LEDs {
-    ///
+    /// Cerate a new instance for controlling the LEDs.
     /// # Panics
     /// If there are insufficient ressource for spawning news tasks.
-    pub fn new(spawner: &mut Spawner) -> Self {
+    /// # Safety
+    /// This is only safe when called once and without concurrently calling any of the `new()``
+    /// methods of the other hardware components.
+    pub unsafe fn new(spawner: &mut Spawner) -> Self {
         let p = unsafe { Peripherals::steal() };
         spawner
             .spawn(led_task(LEDKind::OneCup, p.PA15.degrade()))
