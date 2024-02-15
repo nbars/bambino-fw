@@ -53,10 +53,12 @@ async fn main(mut spawner: Spawner) -> ! {
                     buttons::ButtonKind::OneCup => {
                         if new_state == ButtonState::Pressed {
                             leds.set_state(leds::LEDKind::OneCup, leds::LEDState::Blinking(2));
-                            pump.set_power(pump::PumpPower::Fraction(0.4));
+                            pump.set_power(pump::PumpPower::Fraction(0.5));
+                            let pulses_before = flow_meter.pulse_ctr();
                             pump.enable();
                             flow_meter.wait_for_amount(50000).await;
                             pump.disable();
+                            info!("pulses={}", flow_meter.pulse_ctr() - pulses_before);
                         }
                     }
                     buttons::ButtonKind::TwoCup => {
@@ -64,9 +66,11 @@ async fn main(mut spawner: Spawner) -> ! {
                         if new_state == ButtonState::Pressed {
                             leds.set_state(leds::LEDKind::OneCup, leds::LEDState::Blinking(2));
                             pump.set_power(pump::PumpPower::Fraction(1.0));
+                            let pulses_before = flow_meter.pulse_ctr();
                             pump.enable();
                             flow_meter.wait_for_amount(50000).await;
                             pump.disable();
+                            info!("pulses={}", flow_meter.pulse_ctr() - pulses_before);
                         }
                     }
                     _ => (),
