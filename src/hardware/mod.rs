@@ -3,8 +3,6 @@
 //! of the portafilter machine.
 //!
 
-#![allow(clippy::new_without_default)]
-
 pub mod buttons;
 pub mod flow_meter;
 pub mod heater;

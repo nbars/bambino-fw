@@ -3,6 +3,7 @@
 //!
 #![no_std]
 #![no_main]
+#![allow(clippy::new_without_default)]
 #![warn(clippy::cognitive_complexity, missing_docs)]
 #![deny(
     clippy::missing_safety_doc,
@@ -13,3 +14,4 @@
 )]
 
 pub mod hardware;
+pub mod logic;

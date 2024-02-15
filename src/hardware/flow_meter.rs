@@ -54,13 +54,13 @@ impl<'a> FlowMeter<'a> {
 
     /// Wait until the flowed milligram value received an update and return the new value.
     pub async fn wait_for_next_update(&self) -> u32 {
-        defmt::debug_assert!(self.is_enabled());
+        defmt::assert!(self.is_enabled());
         TOTAL_FLOW_IN_MG_SIGNAL.wait().await
     }
 
     /// Wait until the specified amount of water has been poured.
     pub async fn wait_for_amount(&self, amount_in_mg: u32) {
-        defmt::debug_assert!(self.is_enabled());
+        defmt::assert!(self.is_enabled());
         let start_mg = self.flowed_mg();
         loop {
             let new_value = self.wait_for_next_update().await;
